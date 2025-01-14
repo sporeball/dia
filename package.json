@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/sporeball/dia#readme",
   "dependencies": {
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "strip-indent": "^4.0.0"
   }
 }
