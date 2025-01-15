@@ -1,4 +1,6 @@
 import { fileStem, writeFile } from './util.js';
+import { prettyPrint } from 'html';
+import indentString from 'indent-string';
 import stripIndent from 'strip-indent';
 
 let rules = {};
@@ -17,9 +19,9 @@ function getMatchingTags(tagName, code) {
   const ex = getGlobalMatchingTagsExpression(tagName);
   return Array.from(code.matchAll(ex), match => {
     return {
-      tag: stripIndent(match[0] || '').trim(),
-      attributes: stripIndent(match[1] || '').trim(),
-      content: stripIndent(match[3] || '').trim(),
+      tag: (match[0] || '').trim(),
+      attributes: (match[1] || '').trim(),
+      content: (match[3] || '').trim(),
     };
   });
 }
@@ -111,6 +113,20 @@ function removeAttributes(attributes, code) {
 function replaceTag(oldTagName, newTagName, code) {
   code = code.replace(`<${oldTagName}`, `<${newTagName}`);
   code = code.replace(`</${oldTagName}`, `</${newTagName}`);
+  return code;
+}
+
+function addChildTag(tagName, childTag, code) {
+  const matchingTag = getMatchingTags(tagName, code)[0];
+  const newContent = `${matchingTag.content}\n${childTag}`;
+  const openingParentTag = matchingTag.attributes === '' ? `<${tagName}>` : `<${tagName} ${matchingTag.attributes}>`;
+  code = code.replace(matchingTag.tag, `${openingParentTag}\n${newContent}\n</${tagName}>`)
+  return code;
+}
+
+function surroundTag(tagName, surroundingTagName, code) {
+  const matchingTag = getMatchingTags(tagName, code)[0];
+  code = code.replace(matchingTag.tag, `<${surroundingTagName}>\n${matchingTag.tag}\n</${surroundingTagName}>`);
   return code;
 }
 
@@ -217,11 +233,17 @@ function followRules(code) {
   return code;
 }
 
-addRule('dia-head', DIA_RULE_SIMPLE);
-addRule('dia-title', DIA_RULE_SIMPLE);
-addRule('dia-style', DIA_RULE_SIMPLE);
+addRule('dia-head', function(tagName, code) {
+  code = removeDuplicateTags(tagName, code);
+  code = replaceTag(tagName, 'head', code);
+  code = addChildTag('head', '<meta charset="utf-8">', code);
+  code = addChildTag('head', '<meta name="viewport" content="width=device-width">', code);
+  code = addChildTag('head', '<link rel="stylesheet" href="dia.css">', code);
+  return code;
+});
 addRule('dia-slides', function(tagName, code) {
   code = removeDuplicateTags(tagName, code);
+  code = surroundTag(tagName, 'body', code);
   code = replaceTag(tagName, 'div', code);
   code = addAttributes('div', createEntries('id', 'dia-slides'), code);
   return code;
@@ -298,6 +320,9 @@ addTripleRule('dia-img', function(tagName, code) {
  */
 export default function generateSlides (filename, code) {
   let stem = fileStem(filename);
+  code = `<html>\n${code}\n</html>`;
   code = followRules(code);
+  code = addChildTag('html', '<script src="dia.js"></script>', code);
+  code = prettyPrint(code, { indent_size: 2 });
   writeFile(`${stem}.html`, code);
 }
