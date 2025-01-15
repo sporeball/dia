@@ -5,8 +5,31 @@ import stripIndent from 'strip-indent';
 
 let rules = {};
 
-let DIA_RULE_SIMPLE = function(tagName, code) {
+const DIA_RULE_SIMPLE = function(tagName, code) {
   return code.replaceAll(tagName, tagName.slice(4));
+}
+
+const AO_IS_VANILLA = ao => !ao.key.startsWith('dia-');
+
+function matchWithCapturingGroups(value, ex, ...groups) {
+  return matchAllWithCapturingGroups(value, ex, ...groups)[0];
+}
+
+function matchAllWithCapturingGroups(value, ex, ...groups) {
+  return Array.from(value.matchAll(ex), match => {
+    let object = {};
+    let i = 0;
+    object.raw = (match[0] || '').trim();
+    for (const group of groups) {
+      if (group === '_') {
+        i++;
+        continue;
+      }
+      object[group] = (match[i + 1] || '').trim();
+      i++;
+    }
+    return object;
+  });
 }
 
 /**
@@ -17,13 +40,7 @@ let DIA_RULE_SIMPLE = function(tagName, code) {
  */
 function getMatchingTags(tagName, code) {
   const ex = getGlobalMatchingTagsExpression(tagName);
-  return Array.from(code.matchAll(ex), match => {
-    return {
-      tag: (match[0] || '').trim(),
-      attributes: (match[1] || '').trim(),
-      content: (match[3] || '').trim(),
-    };
-  });
+  return matchAllWithCapturingGroups(code, ex, 'attributes', '_', 'self_closing', 'content');
 }
 
 /**
@@ -42,7 +59,7 @@ function getMatchingTagsCount(tagName, code) {
  * @returns {RegExp}
  */
 function getMatchingTagsExpression(tagName) {
-  return new RegExp(` *<${tagName}( [^<>]*)?(/>|>(.*?)</${tagName}>)`, 's');
+  return new RegExp(` *<${tagName}( [^<>]*)?((/>)|>(.*?)</${tagName}>)`, 's');
 }
 
 /**
@@ -51,7 +68,7 @@ function getMatchingTagsExpression(tagName) {
  * @returns {RegExp}
  */
 function getGlobalMatchingTagsExpression(tagName) {
-  return new RegExp(` *<${tagName}( [^<>]*)?(/>|>(.*?)</${tagName}>)`, 'gs');
+  return new RegExp(` *<${tagName}( [^<>]*)?((/>)|>(.*?)</${tagName}>)`, 'gs');
 }
 
 /**
@@ -75,44 +92,55 @@ function removeDuplicateTags(tagName, code) {
 /**
  * adds all of the given attributes to the first matching tag without any
  * @param {string} tagName
- * @param {string[][]} entries
  * @param {string} code
+ * @param {...string} args
  * @returns {string}
  */
-function addAttributes(tagName, entries, code) {
-  const ex = new RegExp(`<${tagName}( />|>)`, 'gs');
-  // console.log(Array.from(code.matchAll(ex), match => {
-  //   return match[0];
-  // }));
-  code = code.replace(ex, `<${tagName} ${entries.map(entry => `${entry[0]}="${entry[1]}"`).join(' ')}>`);
-  return code;
-}
-
-/**
- * remove all of the given attributes from the first tag
- * @param {object[]} attributes
- * @param {string} code
- * @returns {string}
- */
-function removeAttributes(attributes, code) {
-  for (const attribute of attributes) {
-    code = code.replace(attribute.attribute, '');
+function addAttributes(tagName, code, ...args) {
+  let unique = [];
+  const exTag = new RegExp(`<${tagName}( />|>)`, 'gs');
+  for (const arg of args) {
+    const capturingGroups = matchWithCapturingGroups(arg, /(.*?)="(.*?)"/g, 'key', 'value');
+    if (unique.find(o => o.key === capturingGroups.key) === undefined) {
+      unique.push(capturingGroups);
+    }
   }
-  code = code.replace(/ +>/, '>');
-  code = code.replace(/ +\/>/, ' \/>');
+  code = code.replace(exTag, `<${tagName} ${unique.map(o => o.raw).join(' ')}>`);
   return code;
 }
 
 /**
- * change the name of the first matching tag
+ * convert an attribute object into a class name
+ * @param {object} attributeObject
+ * @returns {string}
+ */
+function convertAttributeObjectToClass(attributeObject) {
+  if (attributeObject === undefined) {
+    return '';
+  }
+  if (!attributeObject.key.startsWith('dia-')) {
+    return '';
+  }
+  return `${attributeObject.key}-${attributeObject.value}`;
+}
+
+/**
+ * change the name of the first matching tag, and remove all of its attributes
  * @param {string} oldTagName
  * @param {string} newTagName
  * @param {string} code
  * @returns {string}
  */
 function replaceTag(oldTagName, newTagName, code) {
-  code = code.replace(`<${oldTagName}`, `<${newTagName}`);
-  code = code.replace(`</${oldTagName}`, `</${newTagName}`);
+  const matchingTag = getMatchingTags(oldTagName, code)[0];
+  let openingTag;
+  if (matchingTag.self_closing === '/>') {
+    openingTag = matchingTag.attributes === '' ? `<${oldTagName} />` : `<${oldTagName} ${matchingTag.attributes} />`;
+  } else {
+    openingTag = matchingTag.attributes === '' ? `<${oldTagName}>` : `<${oldTagName} ${matchingTag.attributes}>`;
+  }
+  code = code.replace(openingTag, `<${newTagName}>`);
+  code = code.replace(`</${oldTagName}>`, `</${newTagName}>`);
   return code;
 }
 
@@ -120,13 +148,13 @@ function addChildTag(tagName, childTag, code) {
   const matchingTag = getMatchingTags(tagName, code)[0];
   const newContent = `${matchingTag.content}\n${childTag}`;
   const openingParentTag = matchingTag.attributes === '' ? `<${tagName}>` : `<${tagName} ${matchingTag.attributes}>`;
-  code = code.replace(matchingTag.tag, `${openingParentTag}\n${newContent}\n</${tagName}>`)
+  code = code.replace(matchingTag.raw, `${openingParentTag}\n${newContent}\n</${tagName}>`)
   return code;
 }
 
 function surroundTag(tagName, surroundingTagName, code) {
   const matchingTag = getMatchingTags(tagName, code)[0];
-  code = code.replace(matchingTag.tag, `<${surroundingTagName}>\n${matchingTag.tag}\n</${surroundingTagName}>`);
+  code = code.replace(matchingTag.raw, `<${surroundingTagName}>\n${matchingTag.raw}\n</${surroundingTagName}>`);
   return code;
 }
 
@@ -142,7 +170,7 @@ function createClassList(attributeObjects) {
       continue;
     }
     classList += ' ';
-    classList += convertAttributeToClass(attributeObject);
+    classList += convertAttributeObjectToClass(attributeObject);
   }
   const classAttributeObject = attributeObjects.find(a => a.key === 'class');
   if (classAttributeObject !== undefined) {
@@ -165,21 +193,6 @@ function createClassListIncludingTagName(tagName, attributeObjects) {
   classList = `${tagName} ${classList}`;
   classList = classList.trim();
   return classList;
-}
-
-/**
- * convert an attribute object into a class name
- * @param {object} attributeObject
- * @returns {SVGAnimatedString}
- */
-function convertAttributeToClass(attributeObject) {
-  if (attributeObject === undefined) {
-    return '';
-  }
-  if (!attributeObject.key.startsWith('dia-')) {
-    return '';
-  }
-  return `${attributeObject.key}-${attributeObject.value}`;
 }
 
 /**
@@ -245,70 +258,52 @@ addRule('dia-slides', function(tagName, code) {
   code = removeDuplicateTags(tagName, code);
   code = surroundTag(tagName, 'body', code);
   code = replaceTag(tagName, 'div', code);
-  code = addAttributes('div', createEntries('id', 'dia-slides'), code);
+  code = addAttributes('div', code, 'id="dia-slides"');
   return code;
 });
 addRule('dia-slide', function(tagName, code) {
   const matchingTags = getMatchingTags(tagName, code);
-  const matchingTagsCount = getMatchingTagsCount(tagName, code);
-  for (let i = 0; i < matchingTagsCount; i++) {
-    let {tag, attributes, content} = matchingTags[i];
-    let attributeObjects = Array.from(attributes.matchAll(/(.*?)="(.*?)"/g), match => {
-      return {
-        attribute: stripIndent(match[0] || '').trim(),
-        key: stripIndent(match[1] || '').trim(),
-        value: stripIndent(match[2] || '').trim(),
-      };
-    });
-    const entries = createEntries(
-      'id', `dia-slide-${i + 1}`,
-      'class', createClassListIncludingTagName(tagName, attributeObjects),
-    );
+  for (let i = 0; i < matchingTags.length; i++) {
+    let {raw, attributes, content} = matchingTags[i];
+    let attributeObjects = matchAllWithCapturingGroups(attributes, /(.*?)="(.*?)"/g, 'key', 'value');
     code = replaceTag(tagName, 'div', code);
-    code = removeAttributes(attributeObjects, code);
-    code = addAttributes('div', entries, code);
+    code = addAttributes(
+      'div',
+      code,
+      `id="dia-slide-${i + 1}"`,
+      `class="${createClassListIncludingTagName(tagName, attributeObjects)}"`,
+      ...attributeObjects.filter(AO_IS_VANILLA).map(a => a.raw),
+    );
   }
   return code;
 });
 addTripleRule('dia-text', function(tagName, code) {
   const matchingTags = getMatchingTags(tagName, code);
-  const matchingTagsCount = getMatchingTagsCount(tagName, code);
-  for (let i = 0; i < matchingTagsCount; i++) {
+  for (let i = 0; i < matchingTags.length; i++) {
     let {tag, attributes, content} = matchingTags[i];
-    let attributeObjects = Array.from(attributes.matchAll(/(.*?)="(.*?)"/g), match => {
-      return {
-        attribute: stripIndent(match[0] || '').trim(),
-        key: stripIndent(match[1] || '').trim(),
-        value: stripIndent(match[2] || '').trim(),
-      };
-    });
-    const entries = createEntries(
-      'class', createClassListIncludingTagName(tagName, attributeObjects),
-    );
+    let attributeObjects = matchAllWithCapturingGroups(attributes, /(.*?)="(.*?)"/g, 'key', 'value');
     code = replaceTag(tagName, 'p', code);
-    code = addAttributes('p', entries, code);
+    code = addAttributes(
+      'p',
+      code,
+      `class="${createClassListIncludingTagName(tagName, attributeObjects)}"`,
+      ...attributeObjects.filter(AO_IS_VANILLA).map(a => a.raw),
+    );
   }
   return code;
 });
 addTripleRule('dia-img', function(tagName, code) {
   const matchingTags = getMatchingTags(tagName, code);
-  const matchingTagsCount = getMatchingTagsCount(tagName, code);
-  for (let i = 0; i < matchingTagsCount; i++) {
+  for (let i = 0; i < matchingTags.length; i++) {
     let {tag, attributes, content} = matchingTags[i];
-    let attributeObjects = Array.from(attributes.matchAll(/(.*?)="(.*?)"/g), match => {
-      return {
-        attribute: stripIndent(match[0] || '').trim(),
-        key: stripIndent(match[1] || '').trim(),
-        value: stripIndent(match[2] || '').trim(),
-      };
-    });
-    const entries = createEntries(
-      'href', attributeObjects.find(a => a.key === 'href')?.value,
-      'class', createClassListIncludingTagName(tagName, attributeObjects),
-    );
+    let attributeObjects = matchAllWithCapturingGroups(attributes, /(.*?)="(.*?)"/g, 'key', 'value');
     code = replaceTag(tagName, 'img', code);
-    code = removeAttributes(attributeObjects, code);
-    code = addAttributes('img', entries, code);
+    code = addAttributes(
+      'img',
+      code,
+      `class="${createClassListIncludingTagName(tagName, attributeObjects)}"`,
+      ...attributeObjects.filter(AO_IS_VANILLA).map(a => a.raw),
+    );
   }
   return code;
 });
