@@ -70,8 +70,15 @@ function removeDuplicateTags(tagName, code) {
   return code;
 }
 
-function addAttribute(tagName, key, value, code) {
-  code = code.replace(`<${tagName}>`, `<${tagName} ${key}="${value}">`);
+/**
+ * adds all of the given attributes to the first matching tag without any
+ * @param {string} tagName
+ * @param {string[][]} entries
+ * @param {string} code
+ * @returns {string}
+ */
+function addAttributes(tagName, entries, code) {
+  code = code.replace(`<${tagName}>`, `<${tagName} ${entries.map(entry => `${entry[0]}="${entry[1]}"`).join(' ')}>`);
   return code;
 }
 
@@ -154,6 +161,24 @@ function convertAttributeToClass(attributeObject) {
 }
 
 /**
+ * create an array of entries
+ * @param  {...any} args
+ * @returns {any[][]}
+ */
+function createEntries(...args) {
+  let entries = [];
+  let entry = [];
+  for (const arg of args) {
+    entry.push(arg);
+    if (entry.length === 2) {
+      entries.push(entry);
+      entry = [];
+    }
+  }
+  return entries;
+}
+
+/**
  * add a rule to the rules list
  * @param {string} tagName
  * @param {function} cb
@@ -180,7 +205,7 @@ addRule('dia-style', DIA_RULE_SIMPLE);
 addRule('dia-slides', function(tagName, code) {
   code = removeDuplicateTags(tagName, code);
   code = replaceTag(tagName, 'div', code);
-  code = addAttribute('div', 'id', 'dia-slides', code);
+  code = addAttributes('div', createEntries('id', 'dia-slides'), code);
   return code;
 });
 addRule('dia-slide', function(tagName, code) {
@@ -195,9 +220,13 @@ addRule('dia-slide', function(tagName, code) {
         value: stripIndent(match[2] || '').trim(),
       };
     });
+    const entries = createEntries(
+      'id', `dia-slide-${i + 1}`,
+      'class', createClassListIncludingTagName(tagName, attributeObjects),
+    );
     code = replaceTag('dia-slide', 'div', code);
     code = removeAttributes(attributeObjects, code);
-    code = addAttribute('div', 'class', createClassListIncludingTagName(tagName, attributeObjects), code);
+    code = addAttributes('div', entries, code);
   }
   return code;
 });
