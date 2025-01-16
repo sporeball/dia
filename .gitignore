@@ -131,4 +131,5 @@ dist
 
 test.dia
 test.html
-test.png
+test*.png
+test*.jpg
