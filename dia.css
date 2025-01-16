@@ -1,7 +1,7 @@
 :root {
   --dia-color-primary:#333;
   --dia-color-secondary:#666;
-  --dia-color-background:#eee;
+  --dia-background:#eee;
   --dia-font:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 }
 
@@ -19,7 +19,7 @@ html {
 body {
   font-family:var(--dia-font);
   color:var(--dia-color-primary);
-  background:var(--dia-color-background);
+  background:var(--dia-background);
 }
 
 p, img {
@@ -34,6 +34,12 @@ p, img {
   padding:25px;
   height:100%;
   overflow:hidden
+}
+
+#dia-slide-index {
+  position:absolute;
+  top:93%;
+  font-size:12px
 }
 
 .dia-slide {

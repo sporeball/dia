@@ -10,6 +10,7 @@ window.addEventListener('DOMContentLoaded', e => {
     window.location.search = urlParameters;
   }
   document.getElementById(`dia-slide-${active_slide}`).classList.add('dia-active');
+  document.getElementById('dia-slide-index').innerHTML = `${active_slide} / ${num_slides}`;
 });
 
 document.addEventListener('keydown', function(e) {
@@ -19,6 +20,7 @@ document.addEventListener('keydown', function(e) {
       document.getElementById(`dia-slide-${--active_slide}`).classList.add('dia-active');
       urlParameters.set('slide', active_slide);
       window.location.search = urlParameters;
+      document.getElementById('dia-slide-index').innerHTML = `${active_slide} / ${num_slides}`;
     }
   }
   if (e.key === 'ArrowRight' || e.code === 'ArrowRight') {
@@ -27,6 +29,7 @@ document.addEventListener('keydown', function(e) {
       document.getElementById(`dia-slide-${++active_slide}`).classList.add('dia-active');
       urlParameters.set('slide', active_slide);
       window.location.search = urlParameters;
+      document.getElementById('dia-slide-index').innerHTML = `${active_slide} / ${num_slides}`;
     }
   }
 });
