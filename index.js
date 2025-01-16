@@ -316,6 +316,7 @@ addTripleRule('dia-img', function(tagName, code) {
 export default function generateSlides (filename, code) {
   let stem = fileStem(filename);
   code = `<html>\n${code}\n</html>`;
+  code = addChildTag('dia-slides', '<p id="dia-repo-link"><a href="https://github.com/sporeball/dia" target="_blank">dia</a></p>', code);
   code = addChildTag('dia-slides', '<p id="dia-slide-index"></p>', code);
   code = followRules(code);
   code = addChildTag('html', '<script src="dia.js"></script>', code);

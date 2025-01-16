@@ -44,6 +44,22 @@ img {
   overflow:hidden
 }
 
+#dia-repo-link {
+  position:absolute;
+  top:25px;
+  left:25px;
+  font-size:14px;
+}
+
+#dia-repo-link a {
+  color:var(--dia-color-primary);
+  text-decoration:none;
+}
+
+#dia-repo-link a:hover {
+  text-decoration:underline;
+}
+
 #dia-slide-index {
   position:absolute;
   top:93%;
