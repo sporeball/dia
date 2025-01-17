@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 import generateSlides from './index.js';
-import { fileStem, readDiaFile } from './util.js';
-import fs from 'node:fs';
+import { fileStem, readDiaFile, watchFile } from './util.js';
 import process from 'node:process';
 import colors from 'picocolors';
 
@@ -12,21 +11,9 @@ function cli () {
   let stem = fileStem(filename);
   console.log(`dia ${colors.cyan('(https://github.com/sporeball/dia)')}`);
   if (watch) {
-    fs.watch(filename, (eventType, filename) => {
-      if (eventType === 'change') {
-        generateSlides(filename, readDiaFile(filename));
-        const time = (new Date).toLocaleTimeString(
-          [],
-          {hour: 'numeric', minute: 'numeric', second: 'numeric'}
-        )
-          .replace(' AM', '')
-          .replace(' PM', '');
-        console.log(`  ${colors.green('o')} wrote slide deck to ${stem}.html (${time})`);
-      }
-    });
+    watchFile(filename, generateSlides, filename, readDiaFile(filename));
   } else {
     generateSlides(filename, readDiaFile(filename));
-    console.log(`  ${colors.green('o')} wrote slide deck to ${stem}.html`);
   }
 }
 

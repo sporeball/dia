@@ -1,6 +1,7 @@
-import { fileStem, writeFile } from './util.js';
+import { fileStem, timestamp_hms, writeFile } from './util.js';
 import { prettyPrint } from 'html';
 import indentString from 'indent-string';
+import colors from 'picocolors';
 import stripIndent from 'strip-indent';
 
 let rules = {};
@@ -322,4 +323,5 @@ export default function generateSlides (filename, code) {
   code = addChildTag('html', '<script src="dia.js"></script>', code);
   code = prettyPrint(code, { indent_size: 2 });
   writeFile(`${stem}.html`, code);
+  console.log(`  ${colors.green('o')} wrote slide deck to ${stem}.html (${timestamp_hms()})`);
 }

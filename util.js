@@ -20,6 +20,23 @@ export function readDiaFile (filename) {
   return contents;
 }
 
+export function timestamp_hms() {
+  return (new Date).toLocaleTimeString(
+    [],
+    {hour: 'numeric', minute: 'numeric', second: 'numeric'}
+  )
+    .replace(' AM', '')
+    .replace(' PM', '');
+}
+
+export function watchFile(filename, cb, ...args) {
+  fs.watch(filename, (e, f) => {
+    if (e === 'change') {
+      cb(...args);
+    }
+  });
+}
+
 export function writeFile (filename, contents) {
   fs.writeFileSync(filename, contents);
 }
