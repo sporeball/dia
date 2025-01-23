@@ -1,3 +1,10 @@
+/*
+  util.js
+  utilities for dia
+  copyright (c) 2025 sporeball
+  MIT license
+*/
+
 import fs from 'node:fs';
 
 export function fileStem (filename) {

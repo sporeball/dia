@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+/*
+  cli.js
+  dia CLI
+  copyright (c) 2025 sporeball
+  MIT license
+*/
+
 import generateSlides from './index.js';
 import { fileStem, readDiaFile, watchFile } from './util.js';
 import process from 'node:process';
@@ -20,5 +27,5 @@ function cli () {
 try {
   cli();
 } catch (e) {
-  console.log(`  ${colors.red('X')} error: ${e.message}`);
+  console.log(`  ${colors.red('X')} error: ${e.stack}`);
 }

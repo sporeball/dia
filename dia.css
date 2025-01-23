@@ -1,3 +1,10 @@
+/*
+  dia.css
+  main stylesheet for built slide decks
+  copyright (c) 2025 sporeball
+  MIT license
+*/
+
 :root {
   --dia-color-primary:#333;
   --dia-color-secondary:#666;
@@ -126,15 +133,15 @@ img {
   justify-items:center;
 }
 
-.dia-layout-title .dia-text-first {
+.dia-layout-title .dia-text-1 {
   font-size:48px;
 }
 
-.dia-layout-title .dia-text-second {
+.dia-layout-title .dia-text-2 {
   font-size:24px
 }
 
-.dia-layout-title-and-body .dia-text-first {
+.dia-layout-title-and-body .dia-text-1 {
   font-size:30px;
 }
 
