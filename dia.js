@@ -33,12 +33,16 @@ window.addEventListener('DOMContentLoaded', e => {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'ArrowLeft' || e.code === 'ArrowLeft') {
     if (active_slide > 1) {
+      document.querySelector('.dia-active').style.animation = '';
       set_slide(--active_slide);
+      document.querySelector('.dia-active').style.animation = 'var(--dia-animation-duration) linear 0s slide-in-right';
     }
   }
   if (e.key === 'ArrowRight' || e.code === 'ArrowRight') {
     if (active_slide < num_slides) {
+      document.querySelector('.dia-active').style.animation = '';
       set_slide(++active_slide);
+      document.querySelector('.dia-active').style.animation = 'var(--dia-animation-duration) linear 0s slide-in-left';
     }
   }
 });
