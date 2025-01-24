@@ -6,6 +6,7 @@
   MIT license
 */
 
+import { matchAllWithCapturingGroups } from './util.js';
 import domWalk from 'dom-walk';
 
 const SELF_CLOSING_TAGS = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'keygen', 'link', 'menuitem', 'meta', 'param', 'source', 'track', 'wbr'];
@@ -14,6 +15,15 @@ function serializeAttributes(attributes) {
   return Object.entries(attributes)
     .map(a => `${a[0]}="${a[1]}"`)
     .join(' ');
+}
+
+function deserializeAttributes(attributes) {
+  let r = {};
+  const matches = matchAllWithCapturingGroups(attributes, /([^ ]+?)="(.+?)"/gm, 'key', 'value');
+  matches.forEach(match => {
+    r[match.key] = match.value;
+  });
+  return r;
 }
 
 function serializeClassList(classList) {
@@ -43,7 +53,7 @@ function serializeElement(element) {
     parts.push(` ${serializeAttributes(attributes)}`);
   }
   if (SELF_CLOSING_TAGS.includes(tagName)) {
-    parts.push('>');
+    parts.push(' />');
   } else {
     parts.push('>');
     // TODO: the other cases?
@@ -53,6 +63,46 @@ function serializeElement(element) {
     parts.push(`</${tagName}>`);
   }
   return parts.join('');
+}
+
+function deserializeString(string, ownerDocument) {
+  let nodes = [];
+  const matches = matchAllWithCapturingGroups(
+    string,
+    /([^<]+)|(<\/([^>]+?)>)|(<([^>]+?)( ([^>]+?))?(>| \/>))/gm,
+    'textNodeRaw',
+    'closingTagRaw', '_',
+    'tagRaw', 'tagName', '_', 'tagAttributes', 'openingTagEnding',
+  );
+  let queue = [];
+  for (const match of matches) {
+    let node;
+    if (match.closingTagRaw) {
+      queue.pop();
+      continue;
+    } else if (match.textNodeRaw) {
+      node = ownerDocument.createTextNode(match.textNodeRaw);
+    } else {
+      node = ownerDocument.createElement(match.tagName);
+      const attributes = deserializeAttributes(match.tagAttributes);
+      for (const [a_key, a_value] of Object.entries(attributes)) {
+        if (a_key === 'class') {
+          node.classList.add(a_value);
+        } else {
+          node.setAttribute(a_key, a_value);
+        }
+      }
+    }
+    if (queue.length > 0) {
+      queue.at(-1).appendChild(node);
+    } else {
+      nodes.push(node);
+    }
+    if (match.openingTagEnding === '>') {
+      queue.push(node);
+    }
+  }
+  return nodes;
 }
 
 class ClassList {
@@ -144,6 +194,9 @@ class DOMElement {
   }
   set id(value) {
     this.setAttribute('id', value);
+  }
+  set innerHTML(value) {
+    this.childNodes = deserializeString(value, this.ownerDocument);
   }
   get className() {
     return this.classList._list.join(' ');

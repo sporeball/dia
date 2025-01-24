@@ -11,6 +11,27 @@ export function fileStem (filename) {
   return filename.slice(0, filename.lastIndexOf('.'));
 }
 
+export function matchWithCapturingGroups (value, ex, ...groups) {
+  return matchAllWithCapturingGroups(value, ex, ...groups)[0];
+}
+
+export function matchAllWithCapturingGroups (value, ex, ...groups) {
+  return Array.from(value.matchAll(ex), match => {
+    let object = {};
+    let i = 0;
+    object.raw = (match[0] || '').trim();
+    for (const group of groups) {
+      if (group === '_') {
+        i++;
+        continue;
+      }
+      object[group] = (match[i + 1] || '');
+      i++;
+    }
+    return object;
+  });
+}
+
 export function readDiaFile (filename) {
   let contents;
   if (filename === undefined) {

@@ -28,7 +28,7 @@ const DIA_FIND_SLIDE_ELEMENT = tableName => {
     .find(entry => tableName.match(new RegExp(`^${entry[0]}-\\d+$`, 'gm')))
     [1];
 };
-const DIA_RESERVED = ['layout'];
+const DIA_RESERVED = ['innerHTML', 'layout'];
 const DIA_IS_RESERVED = tableName => DIA_RESERVED.includes(tableName);
 
 let preconditions = {};
@@ -148,7 +148,9 @@ function appendSlideElementsToDiv(slide_elements, div, data, document) {
       for (const [a_key, a_value] of Object.entries(data[key])) {
         if (a_key === 'class') {
           slide_element.classList.add(a_value);
-        } else {
+        } else if (a_key === 'innerHTML') {
+          slide_element.innerHTML = a_value;
+        } else if (!DIA_IS_RESERVED(a_key)) {
           slide_element.setAttribute(a_key, a_value);
         }
       }
